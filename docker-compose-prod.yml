@@ -1,0 +1,9 @@
+version: '3'
+services:
+    node-express:
+        build:
+            context: .
+            target: production
+            args:
+                - NODE_ENV=PRODUCTION
+        command: "npm run start-prod"

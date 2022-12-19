@@ -1,0 +1,318 @@
+# init JS APP
+npm init
+
+npm install express
+npm install nodemon --save-dev
+
+# run nodemon
+npm run start-dev
+
+############### DOCKER FILE ##############
+FROM node:14.21.1
+ENV NODE_ENV=PRODUCTION-ENV
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["npm", "run","start-dev"]
+###########################################
+
+# build and tag docker image
+docker build -t node-express-docker .
+docker build -t node-express-docker:v1.0.0 .
+
+# show images
+$ docker images # or (docker image ls)
+    REPOSITORRY            TAG       IMAGE ID       CREATED              SIZE
+    node-express-docker   latest    fba8f4ecb615   About a minute ago   925MB
+
+# tag docker
+docker tag node-express-docker:latest node-express-docker:v1.0.0
+
+# remove tag
+docker rmi -f node-express-docker:latest
+
+# run container
+docker run --name node-express-docker-cont -d -p 3000:3000 node-express-docker
+docker run --name node-express-docker-cont -d -p 3000:3000 --env-file .env  node-express-docker:v1.0.0 # with .env file
+# remove container
+docker rm -f node-express-docker-cont
+
+# show running containners
+docker ps
+
+# open interactive termmnal in container
+docker exec -it node-express-docker-cont bash
+
+# docker show logs of running container
+docker logs node-express-docker-cont
+
+# mount binding (volumes)
+docker run --name node-express-docker-cont -d -p 3000:3000 -v $(pwd)/src:/app/src  node-express-docker:v1.0.0
+docker run --name node-express-docker-cont -d -p 3000:3000 -v $(pwd)/src:/app/src:ro  node-express-docker:v1.0.0 # one way binding
+docker run --name node-express-docker-cont -d -p 3000:3000 -v $(pwd)/src:/app/src:ro -v /app/node_modules  node-express-docker:v1.0.0 # one way binding
+
+############### DOCKER-COMPOSE FILE ##############
+version: '3'
+services:
+    node-express:
+        container_name: node-express-docker-cont
+        build: .
+        volumes:
+            - ./src:/app/src:ro
+        ports:
+            - "3000:3000"
+        environment:
+            - LOG_LVL=WARN
+        env_file:
+            - ./.env
+#################################################
+
+# run docker-compose (-d detached)
+docker-compose up
+# stop docker-compose
+docker-compose down
+
+############## *** MULTI STAGE  METHODE 1*** ##############
+#------ run container using environement -------#
+################### DOCKERFILE ##################
+FROM node:14.21.1
+WORKDIR /app
+COPY package.json .
+ARG NODE_ENV
+RUN if [ ${NODE_ENV} = "PRODUCTION" ];\
+        then npm install --omit=dev;\
+        else npm install;\
+    fi
+COPY . .
+EXPOSE 3000
+############### DOCKER-COMPOSE-BASE FILE ##############
+version: '3'
+services:
+    node-express:
+        container_name: node-express-docker-cont
+        build: .
+        ports:
+            - "3000:3000"
+        environment:
+            - LOG_LVL=WARN
+        env_file:
+            - ./.env
+############### DOCKER-COMPOSE-DEV FILE ###############
+version: '3'
+services:
+    node-express:
+        build:
+            context: .
+            args:
+                - NODE_ENV=DEVELOPPEMENT
+        volumes:
+            - ./src:/app/src:ro
+        command: "npm run start-dev"
+############### DOCKER-COMPOSE-PROD FILE ##############
+version: '3'
+services:
+    node-express:
+        build:
+            context: .
+            args:
+                - NODE_ENV=PRODUCTION
+        command: "npm run start-prod"
+######################################################
+
+############## *** MULTI STAGE  METHODE 2*** ##############
+#------ run container using environement -------#
+################### DOCKERFILE ##################
+FROM node:14.21.1 as base
+
+FROM base as developement
+WORKDIR /app
+COPY package.json .
+ARG NODE_ENV
+RUN npm install
+COPY . .
+EXPOSE 3000
+
+FROM base as production
+WORKDIR /app
+COPY package.json .
+ARG NODE_ENV
+RUN npm install --only=production
+COPY . .
+EXPOSE 3000
+
+############### DOCKER-COMPOSE-BASE FILE ##############
+version: '3'
+services:
+    node-express:
+        container_name: node-express-docker-cont
+        build: .
+        ports:
+            - "3000:3000"
+        environment:
+            - LOG_LVL=WARN
+        env_file:
+            - ./.env
+############### DOCKER-COMPOSE-DEV FILE ###############
+version: '3'
+services:
+    node-express:
+        target: developement
+        build:
+            context: .
+            args:
+                - NODE_ENV=DEVELOPPEMENT
+        volumes:
+            - ./src:/app/src:ro
+        command: "npm run start-dev"
+############### DOCKER-COMPOSE-PROD FILE ##############
+version: '3'
+services:
+    node-express:
+        build:
+            context: .
+            target: production
+            args:
+                - NODE_ENV=PRODUCTION
+        command: "npm run start-prod"
+######################################################
+# run container using environement
+docker-compose -f docker-compose.yml -f docker-compose-prod.yml up
+
+
+############ MOGODB CONTAINER ##############
+############### DOCKER-COMPOSE FILE ##############
+version: '3'
+services:
+    node-express:
+        container_name: node-express-docker-cont
+        build: .
+        volumes:
+            - ./src:/app/src:ro
+        ports:
+            - "3000:3000"
+        environment:
+            - LOG_LVL=WARN
+        env_file:
+            - ./.env
+    mongo:
+        image: mongo
+        restart: always
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: "mongodb"
+            MONGO_INITDB_ROOT_PASSWORD: "mongodb"
+#################################################
+############### DOCKER FILE ##############
+FROM node:14.21.1
+ENV NODE_ENV=PRODUCTION-ENV
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["npm", "run","start-dev"]
+#################################################
+
+
+# inspect container
+docker inspect nodejs_mongo_1
+# inspect container
+docker network ls
+docker network inspect nodejs_default
+
+# open interactive mongosh
+docker exec -it nodejs_mongo_1  mongosh -u mongodb -p mongodb
+
+# list volums
+docker volume ls
+# delete unused volumes
+docker volume prune
+
+# add mongo-express (UI tool client DB)
+############### DOCKER-COMPOSE FILE ##############
+version: '3'
+services:
+    node-express:
+        container_name: node-express-docker-cont
+        build: .
+        volumes:
+            - ./src:/app/src:ro
+        ports:
+            - "3000:3000"
+        environment:
+            - LOG_LVL=WARN
+        env_file:
+            - ./.env
+    mongo:
+        image: mongo
+        restart: always
+        volumes:
+            - mongo-db:/data/db
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: "mongodb"
+            MONGO_INITDB_ROOT_PASSWORD: "mongodb"
+    mongo-express:
+        image: mongo-express
+        restart: always
+        ports:
+            - 8081:8081
+        environment:
+            ME_CONFIG_MONGODB_ADMINUSERNAME: mongodb
+            ME_CONFIG_MONGODB_ADMINPASSWORD: mongodb
+            ME_CONFIG_MONGODB_URL: mongodb://mongodb:mongodb@mongo:27017/
+volumes:
+    mongo-db:
+#################################################
+
+
+
+################ redis ##############
+############### DOCKER-COMPOSE FILE ##############
+
+version: '3'
+services:
+    node-express:
+        container_name: node-express-docker-cont
+        build: .
+        volumes:
+            - ./src:/app/src:ro
+        ports:
+            - "3000:3000"
+        environment:
+            - LOG_LVL=WARN
+        env_file:
+            - ./.env
+        depends_on:
+            - mongo
+    mongo:
+        image: mongo
+        restart: always
+        volumes:
+            - mongo-db:/data/db
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: "mongodb"
+            MONGO_INITDB_ROOT_PASSWORD: "mongodb"
+    mongo-express:
+        image: mongo-express
+        restart: always
+        ports:
+            - 8081:8081
+        environment:
+            ME_CONFIG_MONGODB_ADMINUSERNAME: mongodb
+            ME_CONFIG_MONGODB_ADMINPASSWORD: mongodb
+            ME_CONFIG_MONGODB_URL: mongodb://mongodb:mongodb@mongo:27017/
+        depends_on:
+            - mongo
+    redis:
+        image: redis
+volumes:
+    mongo-db:
+###############################################
+
+
+# To delete all containers including its volumes use,
+docker rm -vf $(docker ps -aq)
+# To delete all the images,
+docker rmi -f $(docker images -aq)
+

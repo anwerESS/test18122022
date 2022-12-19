@@ -1,0 +1,11 @@
+version: '3'
+services:
+    node-express:
+        target: developement
+        build:
+            context: .
+            args:
+                - NODE_ENV=DEVELOPPEMENT
+        volumes:
+            - ./src:/app/src:ro
+        command: "npm run start-dev"
