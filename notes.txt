@@ -316,3 +316,8 @@ docker rm -vf $(docker ps -aq)
 # To delete all the images,
 docker rmi -f $(docker images -aq)
 
+# docker push 
+docker push anweress/test-nodejs:v1.0.1
+
+
+# docker pull
