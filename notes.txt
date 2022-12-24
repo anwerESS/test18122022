@@ -318,6 +318,10 @@ docker rmi -f $(docker images -aq)
 
 # docker push 
 docker push anweress/test-nodejs:v1.0.1
-
+docker-compose -f docker-compose.yml  push <service> # example (node-express)
 
 # docker pull
+docker pull anweress/test-nodejs:v1.0.1
+# notify docker service changed
+docker-compose -f docker-compose.yml  pull <service>
+

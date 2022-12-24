@@ -35,7 +35,7 @@ mongoose.connect(`mongodb://${DB_USER}:${DB_PASSWD}@${DB_HOST}:${DB_PORT}`)
 
 
 app.get('/', function (req, res) {
-	res.send('Hello World again again WOWWOWWOW!');
+	res.send('Hello World again again AWS !!');
 });
 
 // test redis

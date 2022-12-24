@@ -2,7 +2,7 @@ version: '3'
 services:
     node-express:
         container_name: node-express-docker-cont
-        image: anweress/test-nodejs:v1.0.1
+        image: anweress/test-nodejs
         build: .
         volumes:
             - ./src:/app/src:ro
